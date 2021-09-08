@@ -4,6 +4,10 @@
 #include <iostream>
 #include <vector>
 
+#define PREALLOCATION_SIZE 64
+
+#define XOR(a, b) ((a + b) % 2)
+
 using namespace std;
 
 class OVector3
@@ -43,23 +47,141 @@ public:
         return !(l == r);
     }
 
-    double operator[](int index)
+    friend ostream &operator<<(ostream &os, const OVector3 &o)
     {
-        switch (index)
+        os << "{" << o.x << ", " << o.y << ", " << o.z << "}";
+        return os;
+    }
+    OVector3 &operator+=(const OVector3 &rhs)
+    {
+        x += rhs.x;
+        y += rhs.y;
+        z += rhs.z;
+        return *this;
+    }
+    friend OVector3 operator+(OVector3 lhs, const OVector3 &rhs)
+    {
+        lhs += rhs;
+        return lhs;
+    }
+};
+
+template <class V>
+class Octree;
+
+template <class S>
+class OctreeInternal
+{
+private:
+    OVector3 origin;
+    OVector3 bounds;
+
+    S *items;
+    size_t n_items;
+
+    Octree<S> *master;
+
+    OctreeInternal<S> *parent;
+    OctreeInternal<S> *children = {0};
+
+public:
+    friend ostream &operator<<(ostream &os, const OctreeInternal &o)
+    {
+        os << "origin: " << o.origin << " bounds: " << o.bounds;
+        return os;
+    }
+
+    void Subdivide()
+    {
+        if (!children)
         {
-        case 0:
-            return x;
-        case 1:
-            return y;
-        case 2:
-            return z;
-        default:
-            cout << "Invalid index (0-3 accepted)" << endl;
-            return __DBL_MAX__;
+            children = (OctreeInternal<S> *)malloc(sizeof(OctreeInternal<S>) * 8);
+
+            OVector3 new_bounds = OVector3{bounds.x / 2, bounds.y / 2, bounds.z / 2};
+
+            // a
+            children[0] = OctreeInternal<S>(master, this, new_bounds, origin);
+            // b
+            children[1] = OctreeInternal<S>(master, this, new_bounds, origin + OVector3{0, 0, new_bounds.z});
+            // c
+            children[2] = OctreeInternal<S>(master, this, new_bounds, origin + OVector3{0, new_bounds.y, 0});
+            // d
+            children[3] = OctreeInternal<S>(master, this, new_bounds, origin + OVector3{0, new_bounds.y, new_bounds.z});
+            // e
+            children[4] = OctreeInternal<S>(master, this, new_bounds, origin + OVector3{new_bounds.x, 0, 0});
+            // f
+            children[5] = OctreeInternal<S>(master, this, new_bounds, origin + OVector3{new_bounds.x, 0, new_bounds.z});
+            // g
+            children[6] = OctreeInternal<S>(master, this, new_bounds, origin + OVector3{new_bounds.x, new_bounds.y, 0});
+            // h
+            children[7] = OctreeInternal<S>(master, this, new_bounds, origin + OVector3{new_bounds.x, new_bounds.y, new_bounds.z});
         }
     }
 
-    OVector3(double x, double y, double z) : x(x), y(y), z(z){};
+    OctreeInternal *FindContainer(OVector3 target)
+    {
+        if (target >= (children[7].bounds + children[7].origin) || target < children[0].bounds)
+            return NULL;
+
+        unsigned pivot = 4;
+        cout << pivot << endl;
+        OctreeInternal *candidate;
+
+        int x;
+
+        while (true)
+        {
+            candidate = &children[pivot];
+
+            cout << "Current pivot: " << pivot << endl;
+            cout << "Candidate: " << *candidate << endl;
+            cout << "Target: " << target << endl;
+
+            bool v_1 = target >= candidate->origin;
+            bool v_2 = target < (candidate->origin + candidate->bounds);
+            bool v_3 = target < candidate->origin;
+            bool v_4 = target >= (candidate->origin + candidate->bounds);
+
+            cout << "Target >= origin: " << v_1 << endl;
+            cout << "Target < origin + bounds: " << v_2 << endl;
+            cout << "Target < origin: " << v_3 << endl;
+            cout << "Target >= origin + bounds: " << v_4 << endl;
+
+            // if point is within container, break
+            if (target >= candidate->origin && target < (candidate->origin + candidate->bounds))
+            {
+                cout << "inside" << endl;
+                return candidate;
+            }
+            else if (target < candidate->origin)
+            {
+                cout << "less" << endl;
+                pivot = (8 - pivot) / 2;
+            }
+            else if (target >= (candidate->origin + candidate->bounds))
+            {
+                cout << "more" << endl;
+                pivot = (8 + pivot) / 2;
+            }
+            else
+            {
+                cout << "none!" << endl;
+            }
+
+            cout << "new pivot: " << pivot << endl
+                 << endl;
+
+            cin >> x;
+        }
+    }
+
+    OctreeInternal<S>() {}
+
+    OctreeInternal<S>(Octree<S> *master, OctreeInternal<S> *parent, OVector3 bounds, OVector3 origin) : master(master), parent(parent), bounds(bounds), origin(origin)
+    {
+        items = (S *)malloc(sizeof(S) * PREALLOCATION_SIZE);
+        n_items = 0;
+    }
 };
 
 template <class T>
@@ -67,24 +189,41 @@ class Octree
 {
 
 private:
-    T* items;
-    unsigned long n_items;
+    size_t subdivision_amount;
+    size_t n_items_total;
+    size_t n_containers_total;
+
+    OctreeInternal<T> root;
 
 public:
-    Octree<T>() {
-        n_items = 0;
-        items = (T*)(malloc(sizeof(T) * 24));
+    Octree<T>(size_t subdivision_amount, OVector3 bounds, OVector3 origin) : subdivision_amount(subdivision_amount)
+    {
+        n_items_total = 0;
+        n_containers_total = 8;
+        root = OctreeInternal<T>(this, NULL, bounds, origin);
+        root.Subdivide();
     }
 
-    bool put(T data, OVector3 position);
-    T get(OVector3 base, double radius);
-    unsigned long size();
-};
+    bool put(T data, OVector3 position)
+    {
+        return root.FindContainer(position);
+    }
 
-template<class T>
-unsigned long Octree<T>::size()
-{
-    return n_items;
-}
+    T get(OVector3 base, double radius);
+
+    size_t size()
+    {
+        return n_items_total;
+    }
+
+    friend ostream &operator<<(ostream &os, const Octree &o)
+    {
+        os << "Prealloc Size: " << PREALLOCATION_SIZE << endl;
+        os << "Subdivision Value: " << o.subdivision_amount << endl;
+        os << "Total items: " << o.n_items_total << endl;
+        os << "Total containers: " << o.n_containers_total;
+        return os;
+    }
+};
 
 #endif //OCTREE_HPP
