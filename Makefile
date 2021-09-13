@@ -1,5 +1,5 @@
 CC := g++
-CCFLAGS := -Wall -O2
+CCFLAGS := -Wall -O2 -g
 STD := -std=c++0x
 CCSHAREDFLAGS := -fPIC -c -shared
 

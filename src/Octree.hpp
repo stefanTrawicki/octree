@@ -4,11 +4,6 @@
 #include <iostream>
 #include <vector>
 
-// libraries for testing
-#include <unistd.h>
-
-#define PREALLOCATION_SIZE 64
-
 #define XOR(a, b) ((a + b) % 2)
 
 using namespace std;
@@ -81,16 +76,32 @@ private:
 
     S *items;
     size_t n_items;
+    unsigned layer;
 
     Octree<S> *master;
 
-    OctreeInternal<S> *parent;
+    OctreeInternal<S> *parent = {0};
     OctreeInternal<S> *children = {0};
 
 public:
+    size_t size()
+    {
+        return n_items;
+    }
+
+    S* GetItems()
+    {
+        return items;
+    }
+
+    bool BoundsCheck(OVector3 point)
+    {
+        return point >= (origin + bounds) || point < origin;
+    }
+
     friend ostream &operator<<(ostream &os, const OctreeInternal &o)
     {
-        os << "origin: " << o.origin << " bounds: " << o.bounds;
+        os << "origin: " << o.origin << " bounds: " << o.bounds << " layer: " << o.layer << " parent: " << o.parent;
         return os;
     }
 
@@ -118,12 +129,17 @@ public:
             children[6] = OctreeInternal<S>(master, this, new_bounds, origin + OVector3{new_bounds.x, new_bounds.y, 0});
             // h
             children[7] = OctreeInternal<S>(master, this, new_bounds, origin + OVector3{new_bounds.x, new_bounds.y, new_bounds.z});
+
+            master->n_containers_total += 8;
         }
     }
 
     OctreeInternal *FindContainer(OVector3 target)
     {
-        if (target >= (children[7].bounds + children[7].origin) || target < children[0].bounds)
+        if (target >= (children[7].origin + children[7].bounds))
+            return NULL;
+
+        if (target < children[0].origin)
             return NULL;
 
         unsigned index = 0;
@@ -133,18 +149,42 @@ public:
         index = index << 1;
         index += (target.z > children[1].origin.z);
 
-        if (children[index])
-            return FindContainer(children[index]);
+        if (children[index].children)
+            return children[index].FindContainer(target);
 
         return &children[index];
+    }
+
+    size_t insert(S data, OVector3 position, unsigned subdivision_amount)
+    {
+        if (size() >= subdivision_amount)
+        {
+            this->Subdivide();
+            OctreeInternal<S> *new_container;
+            for (size_t i = 0; i < this->size(); i++)
+            {
+                new_container = this->FindContainer(position);
+                new_container->insert(this->items[i], position, subdivision_amount);
+            }
+            free(this->items);
+            this->n_items = 0;
+            master->n_items_total -= subdivision_amount;
+        }
+
+        this->items[this->n_items++] == data;
+        master->n_items_total++;
+
+        return this->n_items;
     }
 
     OctreeInternal<S>() {}
 
     OctreeInternal<S>(Octree<S> *master, OctreeInternal<S> *parent, OVector3 bounds, OVector3 origin) : master(master), parent(parent), bounds(bounds), origin(origin)
     {
-        items = (S *)malloc(sizeof(S) * PREALLOCATION_SIZE);
+        items = (S *)malloc(sizeof(S) * master->subdivision_amount);
         n_items = 0;
+        if (!parent) layer = 0;
+        else layer = parent->layer + 1;
     }
 };
 
@@ -153,24 +193,33 @@ class Octree
 {
 
 private:
+    OctreeInternal<T> root;
+
+public:
     size_t subdivision_amount;
     size_t n_items_total;
     size_t n_containers_total;
 
-    OctreeInternal<T> root;
-
-public:
     Octree<T>(size_t subdivision_amount, OVector3 bounds, OVector3 origin) : subdivision_amount(subdivision_amount)
     {
         n_items_total = 0;
-        n_containers_total = 8;
+        n_containers_total = 0;
         root = OctreeInternal<T>(this, NULL, bounds, origin);
         root.Subdivide();
     }
 
-    bool put(T data, OVector3 position)
+    size_t put(T data, OVector3 position)
     {
-        return 0;
+       
+        if (root.BoundsCheck(position))
+            return 0;
+
+        OctreeInternal<T> *container = root.FindContainer(position);
+
+        if (container)
+            return container->insert(data, position, subdivision_amount);
+        else
+            return 0;
     }
 
     T get(OVector3 base, double radius);
@@ -182,7 +231,6 @@ public:
 
     friend ostream &operator<<(ostream &os, const Octree &o)
     {
-        os << "Prealloc Size: " << PREALLOCATION_SIZE << endl;
         os << "Subdivision Value: " << o.subdivision_amount << endl;
         os << "Total items: " << o.n_items_total << endl;
         os << "Total containers: " << o.n_containers_total;
