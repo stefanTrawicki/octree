@@ -4,6 +4,9 @@
 #include <iostream>
 #include <vector>
 
+// libraries for testing
+#include <unistd.h>
+
 #define PREALLOCATION_SIZE 64
 
 #define XOR(a, b) ((a + b) % 2)
@@ -123,56 +126,17 @@ public:
         if (target >= (children[7].bounds + children[7].origin) || target < children[0].bounds)
             return NULL;
 
-        unsigned pivot = 4;
-        cout << pivot << endl;
-        OctreeInternal *candidate;
+        unsigned index = 0;
+        index = (target.x > children[4].origin.x);
+        index = index << 1;
+        index += (target.y > children[2].origin.y);
+        index = index << 1;
+        index += (target.z > children[1].origin.z);
 
-        int x;
+        if (children[index])
+            return FindContainer(children[index]);
 
-        while (true)
-        {
-            candidate = &children[pivot];
-
-            cout << "Current pivot: " << pivot << endl;
-            cout << "Candidate: " << *candidate << endl;
-            cout << "Target: " << target << endl;
-
-            bool v_1 = target >= candidate->origin;
-            bool v_2 = target < (candidate->origin + candidate->bounds);
-            bool v_3 = target < candidate->origin;
-            bool v_4 = target >= (candidate->origin + candidate->bounds);
-
-            cout << "Target >= origin: " << v_1 << endl;
-            cout << "Target < origin + bounds: " << v_2 << endl;
-            cout << "Target < origin: " << v_3 << endl;
-            cout << "Target >= origin + bounds: " << v_4 << endl;
-
-            // if point is within container, break
-            if (target >= candidate->origin && target < (candidate->origin + candidate->bounds))
-            {
-                cout << "inside" << endl;
-                return candidate;
-            }
-            else if (target < candidate->origin)
-            {
-                cout << "less" << endl;
-                pivot = (8 - pivot) / 2;
-            }
-            else if (target >= (candidate->origin + candidate->bounds))
-            {
-                cout << "more" << endl;
-                pivot = (8 + pivot) / 2;
-            }
-            else
-            {
-                cout << "none!" << endl;
-            }
-
-            cout << "new pivot: " << pivot << endl
-                 << endl;
-
-            cin >> x;
-        }
+        return &children[index];
     }
 
     OctreeInternal<S>() {}
@@ -206,7 +170,7 @@ public:
 
     bool put(T data, OVector3 position)
     {
-        return root.FindContainer(position);
+        return 0;
     }
 
     T get(OVector3 base, double radius);
