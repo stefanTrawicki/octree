@@ -1,6 +1,7 @@
 #include "src/Octree.hpp"
 #include <time.h>
 #include <unistd.h>
+#include <chrono>
 
 #define CONT_SIZE 1000
 
@@ -12,19 +13,18 @@ int main(int argc, char const *argv[])
 
     Octree<int> o = Octree<int>(256, bounds, origin);
 
-    srand(time(NULL));
+    // srand(time(NULL));
 
-    double x = 0, y = 0, z = 0;
-    size_t failures = 0;
+    // double x = 0, y = 0, z = 0;
 
-    for (size_t i = 0; i < 2048000; i++)
-    {
-        x = rand() % CONT_SIZE, y = rand() % CONT_SIZE, z = rand() % CONT_SIZE;
-        if (!o.put(5, OVector3{x, y, z}))
-        {
-            cout << "[" << failures++ << "] Failed to store " << OVector3{x, y, z} << endl;
-        }
-    }
+    // for (size_t i = 0; i < (60000 * 3); i++)
+    // {
+    //     x = rand() % CONT_SIZE, y = rand() % CONT_SIZE, z = rand() % CONT_SIZE;
+    //     if (!o.put(5, OVector3{x, y, z}))
+    //     {
+    //         cout << "Failed!" << endl;
+    //     }
+    // }
 
     cout << o << endl;
 
