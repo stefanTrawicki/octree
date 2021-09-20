@@ -11,7 +11,7 @@ int main(int argc, char const *argv[])
     OVector3 origin = OVector3{5, 5, 5};
     OVector3 bounds = OVector3{CONT_SIZE, CONT_SIZE, CONT_SIZE};
 
-    Octree<int> o = Octree<int>(origin, bounds, 1);
+    Octree<int> o = Octree<int>(origin, bounds, 3);
     // std::cout << o.FindContainer(OVector3{13, 7, 7}) << std::endl;
     // std::cout << o.FindContainer(OVector3{0, 0, 0}) << std::endl;
     // std::cout << o.FindContainer(OVector3{5, 5, 5}) << std::endl;
@@ -27,9 +27,14 @@ int main(int argc, char const *argv[])
     }
 
     std::vector<int *> results = o.GetFromPosition(OVector3{0, 0, 0});
-    std::cout << results.size() << std::endl;
 
-    std::cout << *(o.FindContainer(position)) << std::endl;
+    int val = 11;
+    std::cout << *(o.FindContainer(OVector3{val+-3, 5, 5})) << std::endl;
+    std::cout << *(o.FindContainer(OVector3{val, 5, 5})) << std::endl;
+    std::cout << *(o.FindContainer(OVector3{val+3, 5, 5})) << std::endl;
+    std::cout << *(o.FindContainer(OVector3{val+6, 5, 5})) << std::endl;
+    std::cout << *(o.FindContainer(OVector3{val+9, 5, 5})) << std::endl;
+    std::cout << *(o.FindContainer(OVector3{val+12, 5, 5})) << std::endl;
 
     std::cout << o << std::endl;
 

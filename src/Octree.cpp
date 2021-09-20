@@ -1,8 +1,5 @@
 #include "Octree.hpp"
 
-int index_mappings[8][3] = INDEX_MAPPING;
-int direction_mappings[8][3] = DIRECTION_MAPPINGS;
-
 bool operator==(const OVector3 &l, const OVector3 &r)
 {
     return (l.x == r.x && l.y == r.y && l.z == r.z);
@@ -62,7 +59,7 @@ void OVector3::OVec3Mult(float factor)
 
 // octree cell stuff
 
-OctreeCell::OctreeCell(bool isLeaf, OctreeCell *parent) : parent(parent)
+OctreeCell::OctreeCell(bool isLeaf, OctreeCell *parent, unsigned short index) : parent(parent), index(index)
 {
     children[0] = NULL;
 
@@ -90,7 +87,7 @@ void OctreeCell::Subdivide(size_t layer)
         // creating children
         for (unsigned short i = 0; i < 8; i++)
         {
-            children[i] = new OctreeCell(layer - 1 == 0, this);
+            children[i] = new OctreeCell(layer - 1 == 0, this, i);
             children[i]->Subdivide(layer - 1);
         }
     }
@@ -98,62 +95,53 @@ void OctreeCell::Subdivide(size_t layer)
 
 void OctreeCell::Link(size_t layer)
 {
-    for (unsigned i = 0; i < 8; i++)
+    for (unsigned short child_i = 0; child_i < 8; child_i++)
     {
-        // linking neighbours
-        unsigned short neighbour_index = 0;
-        unsigned short neighbour = 0;
-        unsigned short direction = 0;
+        OctreeCell *child = children[child_i];
 
-        std::cout << "layer: " << layer << std::endl;
-        std::cout << "index: " << i << std::endl;
-
-        for (unsigned short j = 0; j < 2; j++)
+        for (unsigned short i = 0; i < 3; i++)
         {
-            for (unsigned short k = 0; k < 3; k++)
+            // given dimensions 0 = x, 1 = y, 2 = z
+            unsigned short neighbour = child->index + (4 >> i);
+            
+            if ((child->index & (4 >> i)) > 0)
             {
-                neighbour = index_mappings[i][k];
-                direction = direction_mappings[i][k];
-
-                std::cout << "n_i: " << neighbour_index <<
-                    " n: " << neighbour <<
-                    " d: " << direction << std::endl;
-
-                if (j == 1)
-                {
-                    std::cout << "negative" << std::endl;
-                    if (parent)
-                    {
-                        std::cout << "parent found!" << std::endl;
-                        if (parent->neighbours[direction])
-                        {
-                            std::cout << "found relevant neighbour!" << std::endl;
-                            SetNeighbour(neighbour_index++, parent->neighbours[direction]->children[neighbour]);
-                        }
-                        else
-                            SetNeighbour(neighbour_index++, NULL);
-                    }
-                    else
-                    {
-                        std::cout << "no parents :(" << std::endl;
-                    }
+                // is remote
+                if (neighbours[i])
+                {            
+                    child->neighbours[i] = neighbours[i]->children[neighbour%8];
                 }
-                else if (j == 0)
+                else
                 {
-                    std::cout << "positive" << std::endl;
-                    SetNeighbour(neighbour_index++, children[neighbour]);
-                    std::cout << "(" << children[neighbour] << ")" << std::endl;
+                    child->neighbours[i] = NULL;
                 }
+                // is local
+                child->neighbours[i+3] = children[neighbour%8];
             }
+            else
+            {        
+                // is remote
+                if (neighbours[i+3])
+                {            
+                    child->neighbours[i+3] = neighbours[i+3]->children[neighbour%8];
+                }
+                else
+                {
+                    child->neighbours[i+3] = NULL;
+                }
+                // is local
+                child->neighbours[i] = children[neighbour%8];
+            }
+            
         }
-
-        std::cout << std::endl;
     }
 
     if (layer > 1)
     {
-        for (unsigned i = 0; i < 8; i++)
-            children[i]->Link(layer-1);
+        for (unsigned short child_i = 0; child_i < 8; child_i++)
+        {
+            children[child_i]->Link(layer-1);
+        }
     }
 }
 

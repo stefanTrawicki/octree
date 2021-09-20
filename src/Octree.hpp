@@ -3,12 +3,6 @@
 
 #include <iostream>
 #include <vector>
-#include <math.h>
-
-// given an index, these are the children that neighbour you
-#define INDEX_MAPPING { {4, 2, 1}, {5, 3, 0}, {6, 0, 3}, {7, 1, 2}, {0, 6, 5}, {1, 7, 4}, {2, 4, 7}, {3, 5, 6} }
-// if you have to retrieve a child from a neighbour, they can be found in this direction
-#define DIRECTION_MAPPINGS { {0, 1, 2}, {0, 1, 5}, {0, 4, 2}, {0, 4, 5}, {3, 1, 2}, {3, 1, 5}, {3, 4, 2}, {3, 4, 5} }
 
 class OVector3
 {
@@ -54,14 +48,15 @@ class OctreeCell
 private:
     std::vector<size_t> *items_index;
     OctreeCell **neighbours;
-    OctreeCell *children[8];
     OctreeCell *parent;
+    OctreeCell *children[8];
+    unsigned short index;
 
     size_t GetLayer();
     void SetNeighbour(unsigned short direction, OctreeCell *cell);
 
 public:
-    OctreeCell(bool isLeaf, OctreeCell *parent);
+    OctreeCell(bool isLeaf, OctreeCell *parent, unsigned short index);
     void Subdivide(size_t layer);
     void Link(size_t layer);
     bool IsLeaf();
@@ -70,10 +65,17 @@ public:
 
     friend std::ostream &operator<<(std::ostream &os, const OctreeCell &o)
     {
+        os << "Index: " << o.index << std::endl;
         os << "Neighbours: " << std::endl;
         for (unsigned short i = 0; i < 6; i++)
         {
-            std::cout << "\t[" << i << "] " << o.neighbours[i] << std::endl;
+            if (o.neighbours)
+            {
+                std::cout << "\t[" << i << "] " << o.neighbours[i];
+                if (o.neighbours[i])
+                    std::cout << " ind: " << o.neighbours[i]->index;
+                std::cout << std::endl;
+            }
         }
         std::cout << "Parent: " << o.parent << std::endl;
         std::cout << "Item index: " << o.items_index->size() << std::endl;
@@ -125,10 +127,10 @@ bool Octree<T>::IsStorable(OVector3 target)
 template <class T>
 Octree<T>::Octree(OVector3 origin, OVector3 bounds, size_t n_layers) : origin(origin), bounds(bounds), n_layers(n_layers)
 {
-    root = new OctreeCell(n_layers == 0, NULL);
+    root = new OctreeCell(n_layers == 0, root, 0);
     root->Subdivide(n_layers);
     root->Link(n_layers);
-    n_containers = pow(8, n_layers);
+    n_containers = 8 << n_layers;
     items = std::vector<struct Storable<T>>();
 }
 
