@@ -63,6 +63,7 @@ private:
 public:
     OctreeCell(bool isLeaf, OctreeCell *parent);
     void Subdivide(size_t layer);
+    void Link(size_t layer);
     bool IsLeaf();
     OctreeCell *GetChildren(unsigned short index);
     std::vector<size_t> *GetIndexContainer();
@@ -126,6 +127,7 @@ Octree<T>::Octree(OVector3 origin, OVector3 bounds, size_t n_layers) : origin(or
 {
     root = new OctreeCell(n_layers == 0, NULL);
     root->Subdivide(n_layers);
+    root->Link(n_layers);
     n_containers = pow(8, n_layers);
     items = std::vector<struct Storable<T>>();
 }

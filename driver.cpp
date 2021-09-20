@@ -11,7 +11,7 @@ int main(int argc, char const *argv[])
     OVector3 origin = OVector3{5, 5, 5};
     OVector3 bounds = OVector3{CONT_SIZE, CONT_SIZE, CONT_SIZE};
 
-    Octree<int> o = Octree<int>(origin, bounds, 2);
+    Octree<int> o = Octree<int>(origin, bounds, 1);
     // std::cout << o.FindContainer(OVector3{13, 7, 7}) << std::endl;
     // std::cout << o.FindContainer(OVector3{0, 0, 0}) << std::endl;
     // std::cout << o.FindContainer(OVector3{5, 5, 5}) << std::endl;

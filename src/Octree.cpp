@@ -84,53 +84,76 @@ void OctreeCell::SetNeighbour(unsigned short direction, OctreeCell *cell)
 
 void OctreeCell::Subdivide(size_t layer)
 {
+
     if (layer > 0)
     {
-
         // creating children
         for (unsigned short i = 0; i < 8; i++)
         {
-            children[i] = new OctreeCell(layer - 1 == 0, parent);
+            children[i] = new OctreeCell(layer - 1 == 0, this);
             children[i]->Subdivide(layer - 1);
         }
     }
-    else
+}
+
+void OctreeCell::Link(size_t layer)
+{
+    for (unsigned i = 0; i < 8; i++)
     {
         // linking neighbours
-        unsigned short ind = 0;
+        unsigned short neighbour_index = 0;
         unsigned short neighbour = 0;
         unsigned short direction = 0;
+
+        std::cout << "layer: " << layer << std::endl;
+        std::cout << "index: " << i << std::endl;
 
         for (unsigned short j = 0; j < 2; j++)
         {
             for (unsigned short k = 0; k < 3; k++)
             {
-                neighbour = index_mappings[ind][k];
-                direction = direction_mappings[ind][k];
-                if (parent)
+                neighbour = index_mappings[i][k];
+                direction = direction_mappings[i][k];
+
+                std::cout << "n_i: " << neighbour_index <<
+                    " n: " << neighbour <<
+                    " d: " << direction << std::endl;
+
+                if (j == 1)
                 {
-                    if (j == 1)
+                    std::cout << "negative" << std::endl;
+                    if (parent)
                     {
+                        std::cout << "parent found!" << std::endl;
                         if (parent->neighbours[direction])
-                            SetNeighbour(ind++, parent->neighbours[direction]->children[neighbour]);
+                        {
+                            std::cout << "found relevant neighbour!" << std::endl;
+                            SetNeighbour(neighbour_index++, parent->neighbours[direction]->children[neighbour]);
+                        }
                         else
-                            SetNeighbour(ind++, NULL);
-                    }
-                    else if (j == 0)
-                    {
-                        SetNeighbour(ind++, parent->children[neighbour]);
+                            SetNeighbour(neighbour_index++, NULL);
                     }
                     else
                     {
-                        SetNeighbour(ind++, NULL);
+                        std::cout << "no parents :(" << std::endl;
                     }
                 }
-                else
+                else if (j == 0)
                 {
-                    SetNeighbour(ind++, NULL);
+                    std::cout << "positive" << std::endl;
+                    SetNeighbour(neighbour_index++, children[neighbour]);
+                    std::cout << "(" << children[neighbour] << ")" << std::endl;
                 }
             }
         }
+
+        std::cout << std::endl;
+    }
+
+    if (layer > 1)
+    {
+        for (unsigned i = 0; i < 8; i++)
+            children[i]->Link(layer-1);
     }
 }
 
