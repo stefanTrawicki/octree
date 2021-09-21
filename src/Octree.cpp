@@ -1,5 +1,7 @@
 #include "Octree.hpp"
 
+char temp[3] = {'x', 'y', 'z'};
+
 bool operator==(const OVector3 &l, const OVector3 &r)
 {
     return (l.x == r.x && l.y == r.y && l.z == r.z);
@@ -102,10 +104,14 @@ void OctreeCell::Link(size_t layer)
         for (unsigned short i = 0; i < 3; i++)
         {
             // given dimensions 0 = x, 1 = y, 2 = z
-            unsigned short neighbour = child->index + (4 >> i);
+            unsigned short neighbour = child->index & (4 >> i) ? child->index - (4 >> i) : child->index + (4 >> i);
             
+            // std::cout << "ind: " << child->index << " dim: " << temp[i] << " (" << (4>>i) << ") nei: " << neighbour << " (" << neighbour%8 << ")" << std::endl;
+
+            // if the index cannot be increased in this dimension without expanding into other container
             if ((child->index & (4 >> i)) > 0)
             {
+                // std::cout << "will be remote!" << std::endl;
                 // is remote
                 if (neighbours[i])
                 {            

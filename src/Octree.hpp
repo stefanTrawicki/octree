@@ -65,6 +65,7 @@ public:
 
     friend std::ostream &operator<<(std::ostream &os, const OctreeCell &o)
     {
+        os << "This: " << &o << std::endl;
         os << "Index: " << o.index << std::endl;
         os << "Neighbours: " << std::endl;
         for (unsigned short i = 0; i < 6; i++)
