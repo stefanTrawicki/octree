@@ -1,7 +1,5 @@
 #include "Octree.hpp"
 
-char temp[3] = {'x', 'y', 'z'};
-
 bool operator==(const OVector3 &l, const OVector3 &r)
 {
     return (l.x == r.x && l.y == r.y && l.z == r.z);
@@ -65,7 +63,7 @@ OctreeCell::OctreeCell(bool isLeaf, OctreeCell *parent, unsigned short index) : 
 {
     children[0] = NULL;
 
-    neighbours = (OctreeCell **)malloc(sizeof(OctreeCell *) * 6);
+    neighbours = (OctreeCell **)malloc(sizeof(OctreeCell *) * 3);
 
     if (isLeaf)
         items_index = new std::vector<size_t>(0);
@@ -74,11 +72,6 @@ OctreeCell::OctreeCell(bool isLeaf, OctreeCell *parent, unsigned short index) : 
 bool OctreeCell::IsLeaf()
 {
     return children[0] == NULL;
-}
-
-void OctreeCell::SetNeighbour(unsigned short direction, OctreeCell *cell)
-{
-    neighbours[direction] = cell;
 }
 
 void OctreeCell::Subdivide(size_t layer)
@@ -105,8 +98,6 @@ void OctreeCell::Link(size_t layer)
         {
             // given dimensions 0 = x, 1 = y, 2 = z
             unsigned short neighbour = child->index & (4 >> i) ? child->index - (4 >> i) : child->index + (4 >> i);
-            
-            // std::cout << "ind: " << child->index << " dim: " << temp[i] << " (" << (4>>i) << ") nei: " << neighbour << " (" << neighbour%8 << ")" << std::endl;
 
             // if the index cannot be increased in this dimension without expanding into other container
             if ((child->index & (4 >> i)) > 0)
@@ -121,20 +112,9 @@ void OctreeCell::Link(size_t layer)
                 {
                     child->neighbours[i] = NULL;
                 }
-                // is local
-                child->neighbours[i+3] = children[neighbour%8];
             }
             else
             {        
-                // is remote
-                if (neighbours[i+3])
-                {            
-                    child->neighbours[i+3] = neighbours[i+3]->children[neighbour%8];
-                }
-                else
-                {
-                    child->neighbours[i+3] = NULL;
-                }
                 // is local
                 child->neighbours[i] = children[neighbour%8];
             }
@@ -156,7 +136,24 @@ OctreeCell *OctreeCell::GetChildren(unsigned short index)
     return children[index];
 }
 
+unsigned short OctreeCell::GetIndex()
+{
+    return index;
+}
+
+OctreeCell *OctreeCell::GetNeighbour(unsigned short index)
+{
+    if (index < 0 || index > 2) return NULL;
+
+    return neighbours[index];
+}
+
 std::vector<size_t> *OctreeCell::GetIndexContainer()
 {
     return items_index;
+}
+
+size_t OctreeCell::Size()
+{
+    return items_index->size();
 }

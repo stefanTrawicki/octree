@@ -51,6 +51,7 @@ private:
     OctreeCell *parent;
     OctreeCell *children[8];
     unsigned short index;
+    size_t layer;
 
     size_t GetLayer();
     void SetNeighbour(unsigned short direction, OctreeCell *cell);
@@ -60,7 +61,10 @@ public:
     void Subdivide(size_t layer);
     void Link(size_t layer);
     bool IsLeaf();
+    size_t Size();
     OctreeCell *GetChildren(unsigned short index);
+    unsigned short GetIndex();
+    OctreeCell* GetNeighbour(unsigned short index);
     std::vector<size_t> *GetIndexContainer();
 
     friend std::ostream &operator<<(std::ostream &os, const OctreeCell &o)
@@ -107,6 +111,7 @@ public:
     bool Put(T data, OVector3 position);
     size_t Size();
     bool IsStorable(OVector3 target);
+    size_t GetFromArea(OVector3 lower_bound, OVector3 upper_bound, std::vector<struct Storable<T>> *results);
 
     friend std::ostream &operator<<(std::ostream &os, const Octree<T> &o)
     {
@@ -131,7 +136,9 @@ Octree<T>::Octree(OVector3 origin, OVector3 bounds, size_t n_layers) : origin(or
     root = new OctreeCell(n_layers == 0, root, 0);
     root->Subdivide(n_layers);
     root->Link(n_layers);
-    n_containers = 8 << n_layers;
+    n_containers = 8;
+    for (size_t i = 0; i < n_layers; i++)
+        n_containers *= 8;
     items = std::vector<struct Storable<T>>();
 }
 
@@ -221,6 +228,66 @@ bool Octree<T>::Put(T data, OVector3 position)
         return true;
     }
     return false;
+}
+
+template <class T>
+size_t Octree<T>::GetFromArea(OVector3 lower_bound, OVector3 upper_bound, std::vector<struct Storable<T>> *results)
+{
+    if (!(IsStorable(lower_bound) && IsStorable(upper_bound))) return 0;
+    
+    if (upper_bound == lower_bound) return 0;
+    if (lower_bound > upper_bound)
+    {
+        OVector3 temp = lower_bound;
+        lower_bound = upper_bound;
+        upper_bound = temp;
+    }
+
+    results = new std::vector<struct Storable<T>>(0);
+
+    OctreeCell *points[4] = {NULL, NULL, NULL, NULL};
+
+    points[0] = FindContainer(lower_bound);
+    if (!points[0]) return 0;
+
+    // in x dim
+    points[1] = FindContainer(OVector3{lower_bound.x + upper_bound.x, lower_bound.y, lower_bound.z});
+    // in y dim
+    points[2] = FindContainer(OVector3{lower_bound.x, lower_bound.y + upper_bound.y, lower_bound.z});
+    // in z dim
+    points[3] = FindContainer(OVector3{lower_bound.x, lower_bound.y, lower_bound.z + upper_bound.z});
+
+    if (!points[1] || !points[2] || !points[3]) return 0;
+
+    OctreeCell *windows[3] = {points[0], points[0], points[0]};
+
+    size_t count = 0;
+
+    while(windows[2] != points[3]->GetNeighbour(2))
+    {
+        while(windows[1] != points[2]->GetNeighbour(1))
+        {
+            while(windows[0] != points[1]->GetNeighbour(0))
+            {
+                // std::cout << "\t\tx" << std::endl;
+                for (auto const& i : *(windows[0]->GetIndexContainer()))
+                {
+                    results->push_back(items.at(i));                    
+                    count++;
+                }
+                windows[0] = windows[0]->GetNeighbour(0);
+            }
+            // std::cout << "\ty" << std::endl;
+            windows[0] = points[0];
+            windows[1] = windows[1]->GetNeighbour(1);
+        }
+        // std::cout << "z" << std::endl;
+        windows[1] = points[0];
+        windows[2] = windows[2]->GetNeighbour(2);
+    }
+
+    return count;
+
 }
 
 #endif //OCTREE_HPP
