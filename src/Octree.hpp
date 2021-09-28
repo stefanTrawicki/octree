@@ -243,8 +243,6 @@ size_t Octree<T>::GetFromArea(OVector3 lower_bound, OVector3 upper_bound, std::v
         upper_bound = temp;
     }
 
-    results = new std::vector<struct Storable<T>>(0);
-
     OctreeCell *points[4] = {NULL, NULL, NULL, NULL};
 
     points[0] = FindContainer(lower_bound);
@@ -273,8 +271,8 @@ size_t Octree<T>::GetFromArea(OVector3 lower_bound, OVector3 upper_bound, std::v
                 for (auto const& i : *(windows[0]->GetIndexContainer()))
                 {
                     results->push_back(items.at(i));                    
-                    count++;
                 }
+                count++;
                 windows[0] = windows[0]->GetNeighbour(0);
             }
             // std::cout << "\ty" << std::endl;
