@@ -3,7 +3,7 @@ CCFLAGS := -Wall -O2 -g
 STD := -std=c++0x
 CCSHAREDFLAGS := -fPIC -c -shared
 
-TARGET_NAME := Octree
+TARGET_NAME := Quadtree
 TARGET := $(addprefix lib,$(basename $(TARGET_NAME)))
 TARGET := $(addsuffix .so,$(basename $(TARGET)))
 

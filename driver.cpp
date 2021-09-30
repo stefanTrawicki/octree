@@ -1,4 +1,4 @@
-#include "src/Octree.hpp"
+#include "src/Quadtree.hpp"
 #include <time.h>
 #include <unistd.h>
 #include <chrono>
